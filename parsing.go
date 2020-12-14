@@ -8,35 +8,44 @@ import (
 	"time"
 )
 
+var (
+	NewSequenceReg = regexp.MustCompile(`.*--- Nouvelle.*`)
+	FileNameReg    = regexp.MustCompile(`Fichier`)
+	LengthReg      = regexp.MustCompile(`Durée`)
+	SynopsisReg    = regexp.MustCompile(`Note boîte`)
+	DateReg        = regexp.MustCompile(`Date`)
+	PlaceReg       = regexp.MustCompile(`Lieu`)
+	PeopleReg      = regexp.MustCompile(`Pr[é|e]{1}sents?`)
+	EventReg       = regexp.MustCompile(`Ev[ê|e]{1}nement`)
+
+	timerRegexp = regexp.MustCompile(`.*([0-9]{2}:[0-9]{2}).*`)
+)
+
 func parseCanoTrack(rawInput []byte) *CanoTrack {
 	inputString := sanitize(string(rawInput))
 
 	track := &CanoTrack{}
 
-	timers, timerIncides, lines := extractTimersFromLines(inputString)
+	timers, timerIndices, lines := extractTimersFromLines(inputString)
 
-	for i := range timerIncides {
+	for i := range timerIndices {
 		sectionLines := []string(nil)
-		if i+1 < len(timerIncides) {
-			sectionLines = lines[timerIncides[i]:timerIncides[i+1]]
+		if i+1 < len(timerIndices) {
+			sectionLines = lines[timerIndices[i]:timerIndices[i+1]]
 		} else {
-			sectionLines = lines[timerIncides[i]:]
+			sectionLines = lines[timerIndices[i]:]
 		}
 
 		switch {
 		case i == 0:
-			track.FileName, track.Synopsis = parseTrackInfo(lines[:timerIncides[1]])
+			track.FileName, track.Synopsis = parseTrackInfo(lines[:timerIndices[1]])
 			track.Length = timers[0]
-		case isSequence(sectionLines[0]):
-			track.Sequences = append(track.Sequences, parseSequence(sectionLines[1:], timers[i]))
 		default:
 			track.Descriptions = append(track.Descriptions, parseDescription(sectionLines, timers[i]))
 		}
 	}
 	return track
 }
-
-var timerRegexp = regexp.MustCompile(`.*([0-9]{2}:[0-9]{2}).*`)
 
 // extractTimersFromLines find all timers in the raw input and return the following slices:
 // timers: all timers found
@@ -78,12 +87,19 @@ func parseTrackInfo(trackInfoLines []string) (string, string) {
 	fileName := ""
 	synopsisLines := []string(nil)
 	for _, line := range trackInfoLines {
+		tmp := strings.SplitN(line, ":", 2)
+		content := ""
+		if len(tmp) == 2 {
+			content = sanitize(tmp[1])
+		}
 		switch {
-		case strings.HasPrefix(line, "Fichier:"):
-			fileName = strings.TrimPrefix(line, "Fichier:")
-		case strings.HasPrefix(line, "Durée:"):
-		case strings.HasPrefix(line, "Note boîte:"):
-			synopsisLines = append(synopsisLines, strings.TrimPrefix(line, "Note boîte:"))
+		case FileNameReg.MatchString(line):
+			fileName = content
+		case LengthReg.MatchString(line):
+		case SynopsisReg.MatchString(line):
+			if content != "" {
+				synopsisLines = append(synopsisLines, content)
+			}
 		default:
 			synopsisLines = append(synopsisLines, line)
 		}
@@ -115,40 +131,42 @@ func sanitizeLine(line string) string {
 	return strings.Join(strings.Fields(line), " ")
 }
 
-// isSequence returns true when first line contains "--- Nouvelle"
-func isSequence(sectionFirstLine string) bool {
-	return strings.Contains(sectionFirstLine, "--- Nouvelle")
-}
-
-func parseSequence(sequenceLines []string, timer time.Duration) Sequence {
-	seq := Sequence{
-		Description: Description{
-			Timer: timer,
-		},
+func parseDescription(descriptionLines []string, timer time.Duration) Description {
+	desc := Description{
+		Timer: timer,
 	}
-	for _, line := range sequenceLines {
+	for _, line := range descriptionLines {
+		tmp := strings.SplitN(line, ":", 2)
+		content := ""
+		if len(tmp) == 2 {
+			content = sanitize(tmp[1])
+		}
 		switch {
-		case strings.HasPrefix(line, "Date:"):
-			seq.Date = sanitizeLine(strings.TrimPrefix(line, "Date:"))
-		case strings.HasPrefix(line, "Lieu:"):
-			seq.Place = sanitizeLine(strings.TrimPrefix(line, "Lieu:"))
-		case strings.HasPrefix(line, "Evênement:"):
-			seq.Event = sanitizeLine(strings.TrimPrefix(line, "Evênement:"))
-		case strings.HasPrefix(line, "Evenement:"):
-			seq.Event = sanitizeLine(strings.TrimPrefix(line, "Evenement:"))
-		case strings.HasPrefix(line, "Présents:"):
-			seq.People = sanitizeLine(strings.TrimPrefix(line, "Présents:"))
+		case NewSequenceReg.MatchString(tmp[0]):
+			desc.IsSequence = true
+		case DateReg.MatchString(tmp[0]):
+			if content != "" {
+				desc.Date = content
+			}
+		case PlaceReg.MatchString(tmp[0]):
+			if content != "" {
+				desc.Place = content
+			}
+		case EventReg.MatchString(tmp[0]):
+			if content != "" {
+				desc.Event = content
+			}
+		case PeopleReg.MatchString(tmp[0]):
+			if content != "" {
+				desc.Content = append(desc.Content, line)
+			}
 		default:
-			seq.Description.Content = append(seq.Description.Content, line)
+			line = sanitizeLine(line)
+			if line != "" {
+				desc.Content = append(desc.Content, line)
+			}
 		}
 	}
 
-	return seq
-}
-
-func parseDescription(descriptionLines []string, timer time.Duration) Description {
-	return Description{
-		Content: descriptionLines,
-		Timer:   timer,
-	}
+	return desc
 }

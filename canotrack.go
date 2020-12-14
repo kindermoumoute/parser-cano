@@ -10,85 +10,70 @@ type CanoTrack struct {
 	FileName     string
 	Length       time.Duration
 	Synopsis     string
-	Sequences    []Sequence
 	Descriptions []Description
 }
 
-type Sequence struct {
-	Date        string
-	Place       string
-	Event       string
-	People      string
-	Description Description
-}
-
 type Description struct {
-	Content []string
-	Timer   time.Duration
+	Content    []string
+	Place      string
+	Date       string
+	Event      string
+	IsSequence bool
+	Timer      time.Duration
 }
 
 func (t *CanoTrack) ToSRT(sampleLevel int) *SRT {
 	srt := &SRT{}
+	sequences := []*Caption(nil)
 
-	if sampleLevel >= 2 {
-		for _, seq := range t.Sequences {
-			text := seq.Description.Content
-			if len(text) > 0 && sampleLevel == 2 {
-				text = text[:1]
-			}
-
-			if sampleLevel >= 2 && seq.People != "" {
-				text = append([]string{seq.People}, text...)
-			}
-			if text != nil {
-				srt.Captions = append(srt.Captions, &Caption{
-					Start: time.Time{}.Add(seq.Description.Timer),
-					End:   time.Time{}.Add(seq.Description.Timer + defaultCaptionDuration),
-					Text:  text,
-				})
-			}
+	for _, desc := range t.Descriptions {
+		// Add content
+		timer, content := desc.Timer, []string(nil)
+		switch {
+		case desc.IsSequence && sampleLevel >= 3:
+			content = desc.Content
+		case desc.IsSequence && sampleLevel == 2:
+			content = desc.Content[:1]
+		case !desc.IsSequence && sampleLevel == 4:
+			content = desc.Content
+		case !desc.IsSequence && sampleLevel == 3:
+			content = desc.Content[:1]
 		}
-	}
+		if len(content) != 0 { // TODO: handle empty contents
+			srt.Captions = append(srt.Captions, newCaption(timer+time.Millisecond, content))
+		}
 
-	if sampleLevel >= 3 {
-		for _, desc := range t.Descriptions {
-			text := desc.Content
-			if sampleLevel == 3 {
-				text = text[:1]
-			}
-			srt.Captions = append(srt.Captions, &Caption{
-				Start: time.Time{}.Add(desc.Timer),
-				End:   time.Time{}.Add(desc.Timer + defaultCaptionDuration),
-				Text:  text,
-			})
+		// Add Metadata
+		metadataContent := []string(nil) // TODO: wtf sequences are not showing?
+		if desc.Place != "" {
+			metadataContent = append(metadataContent, fmt.Sprintf(`{\an9}<u>Lieu</u>: %s`, desc.Place))
+		}
+		if desc.Event != "" {
+			metadataContent = append(metadataContent, fmt.Sprintf(`{\an8}<u>Evênement</u>: %s`, desc.Event))
+		}
+		if desc.Date != "" {
+			metadataContent = append(metadataContent, fmt.Sprintf(`{\an7}<u>Date</u>: %s`, desc.Date))
+		}
+		if len(metadataContent) != 0 {
+			sequences = append(sequences, newCaption(timer, metadataContent))
 		}
 	}
 
 	srt.sort()
 	srt.removeOverLap()
 
-	for _, seq := range t.Sequences {
-		text := []string(nil)
-		if seq.Place != "" {
-			text = append(text, fmt.Sprintf(`{\an7}<font color=#ff0000><u>Lieu</u>: %s<font>`, seq.Place))
-		}
-		if seq.Event != "" {
-			text = append(text, fmt.Sprintf(`{\an4}<font color=#ff0000><u>Evênement</u>: %s<font>`, seq.Event))
-		}
-		if seq.Date != "" {
-			text = append(text, fmt.Sprintf(`{\an9}<font color=#ff0000><u>Date</u>: %s<font>`, seq.Date))
-		}
-
-		srt.Captions = append(srt.Captions, &Caption{
-			Start: time.Time{}.Add(seq.Description.Timer),
-			End:   time.Time{}.Add(seq.Description.Timer + defaultCaptionDuration),
-			Text:  text,
-		})
-	}
-
+	srt.Captions = append(srt.Captions, sequences...)
 	srt.sort()
 
 	return srt
+}
+
+func newCaption(timer time.Duration, content []string) *Caption {
+	return &Caption{
+		Start: time.Time{}.Add(timer),
+		End:   time.Time{}.Add(timer + defaultCaptionDuration),
+		Text:  content,
+	}
 }
 
 func (s *SRT) sort() {
@@ -107,7 +92,7 @@ func (s *SRT) removeOverLap() {
 			continue
 		}
 		if s.Captions[i+1].Start.Before(caption.End) {
-			caption.End = s.Captions[i+1].Start
+			caption.End = s.Captions[i+1].Start.Add(-time.Millisecond)
 		}
 	}
 }

@@ -14,11 +14,6 @@ const (
 	defaultCaptionDuration = 10 * time.Second
 )
 
-// date en haut a gauche
-// lieu en haut à droite
-// lieu sur timestamp
-// enlever Présent
-// tune millisecond sequence + text
 func main() {
 	// go run . 002C.txt 003C.txt 004C.txt 005C.txt 007C.txt 009C.txt
 
