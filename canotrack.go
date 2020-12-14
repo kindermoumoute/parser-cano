@@ -39,12 +39,12 @@ func (t *CanoTrack) ToSRT(sampleLevel int) *SRT {
 		case !desc.IsSequence && sampleLevel == 3:
 			content = desc.Content[:1]
 		}
-		if len(content) != 0 { // TODO: handle empty contents
+		if len(content) != 0 {
 			srt.Captions = append(srt.Captions, newCaption(timer+time.Millisecond, content))
 		}
 
 		// Add Metadata
-		metadataContent := []string(nil) // TODO: wtf sequences are not showing?
+		metadataContent := []string(nil)
 		if desc.Place != "" {
 			metadataContent = append(metadataContent, fmt.Sprintf(`{\an9}<u>Lieu</u>: %s`, desc.Place))
 		}
