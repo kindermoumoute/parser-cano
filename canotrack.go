@@ -33,11 +33,15 @@ func (t *CanoTrack) ToSRT(sampleLevel int) *SRT {
 		case desc.IsSequence && sampleLevel >= 3:
 			content = desc.Content
 		case desc.IsSequence && sampleLevel == 2:
-			content = desc.Content[:1]
+			if len(desc.Content) > 1 {
+				content = desc.Content[:1]
+			}
 		case !desc.IsSequence && sampleLevel == 4:
 			content = desc.Content
 		case !desc.IsSequence && sampleLevel == 3:
-			content = desc.Content[:1]
+			if len(desc.Content) > 1 {
+				content = desc.Content[:1]
+			}
 		}
 		if len(content) != 0 {
 			srt.Captions = append(srt.Captions, newCaption(timer+time.Millisecond, content))
