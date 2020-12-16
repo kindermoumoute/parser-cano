@@ -2,6 +2,7 @@ package parser_cano
 
 import (
 	"fmt"
+	"os"
 	"regexp"
 	"strconv"
 	"strings"
@@ -64,7 +65,7 @@ func extractTimersFromLines(rawInput string) ([]time.Duration, []int, []string) 
 	for _, lineMatch := range matches {
 		lineIndex, exist := lineIndices[lineMatch[0]]
 		if !exist {
-			fmt.Println("INFO: skipping match on line ", lineMatch)
+			fmt.Fprintln(os.Stderr, "INFO: skipping match on line ", lineMatch)
 			continue
 		}
 
