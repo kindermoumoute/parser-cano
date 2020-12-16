@@ -72,6 +72,7 @@ func (t *CanoTrack) ToSRT(sampleLevel int) *SRT {
 
 	srt.Captions = append(srt.Captions, sequences...)
 	srt.sort()
+	srt.removeOverLapOnSequences(sequences)
 
 	return srt
 }
@@ -99,6 +100,27 @@ func (s *SRT) removeOverLap() {
 		if i+1 == len(s.Captions) {
 			continue
 		}
+		if s.Captions[i+1].Start.Before(caption.End) {
+			caption.End = s.Captions[i+1].Start.Add(-time.Millisecond)
+		}
+	}
+}
+
+func (s *SRT) removeOverLapOnSequences(sequences []*Caption) {
+	isSequence := func(caption *Caption) bool {
+		content := strings.Join(caption.Text, "\n")
+		for _, seq := range sequences {
+			if strings.Join(seq.Text, "\n") == content {
+				return true
+			}
+		}
+		return false
+	}
+	for i, caption := range s.Captions {
+		if i+1 == len(s.Captions) || isSequence(caption) {
+			continue
+		}
+
 		if s.Captions[i+1].Start.Before(caption.End) {
 			caption.End = s.Captions[i+1].Start.Add(-time.Millisecond)
 		}
