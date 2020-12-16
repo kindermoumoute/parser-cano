@@ -1,13 +1,15 @@
 package parser_cano
 
 import (
-	"fmt"
 	"sort"
+	"strings"
 	"time"
 )
 
 const (
-	defaultCaptionDuration = 10 * time.Second
+	sequenceCaptionDuration    = 10 * time.Second
+	minimumInfoCaptionDuration = 3 * time.Second
+	charPerSecond              = 15
 )
 
 type CanoTrack struct {
@@ -48,22 +50,20 @@ func (t *CanoTrack) ToSRT(sampleLevel int) *SRT {
 			}
 		}
 		if len(content) != 0 {
-			srt.Captions = append(srt.Captions, newCaption(timer+time.Millisecond, content))
+			charCount := len(strings.Join(content, ""))
+			infoDuration := time.Duration(charCount/charPerSecond)*time.Second + minimumInfoCaptionDuration
+			srt.Captions = append(srt.Captions, newCaption(timer+time.Millisecond, content, infoDuration))
 		}
 
 		// Add Metadata
-		metadataContent := []string(nil)
 		if desc.Place != "" {
-			metadataContent = append(metadataContent, fmt.Sprintf(`{\an9}<u>Lieu</u>: %s`, desc.Place))
+			sequences = append(sequences, newCaption(timer, []string{`{\an9}` + desc.Place}, sequenceCaptionDuration))
 		}
 		if desc.Event != "" {
-			metadataContent = append(metadataContent, fmt.Sprintf(`{\an8}<u>Evênement</u>: %s`, desc.Event))
+			sequences = append(sequences, newCaption(timer, []string{`{\an8}` + desc.Event}, sequenceCaptionDuration))
 		}
 		if desc.Date != "" {
-			metadataContent = append(metadataContent, fmt.Sprintf(`{\an7}<u>Date</u>: %s`, desc.Date))
-		}
-		if len(metadataContent) != 0 {
-			sequences = append(sequences, newCaption(timer, metadataContent))
+			sequences = append(sequences, newCaption(timer, []string{`{\an7}` + desc.Date}, sequenceCaptionDuration))
 		}
 	}
 
@@ -76,10 +76,10 @@ func (t *CanoTrack) ToSRT(sampleLevel int) *SRT {
 	return srt
 }
 
-func newCaption(timer time.Duration, content []string) *Caption {
+func newCaption(timer time.Duration, content []string, duration time.Duration) *Caption {
 	return &Caption{
 		Start: time.Time{}.Add(timer),
-		End:   time.Time{}.Add(timer + defaultCaptionDuration),
+		End:   time.Time{}.Add(timer + duration),
 		Text:  content,
 	}
 }

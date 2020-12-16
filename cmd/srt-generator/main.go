@@ -14,7 +14,7 @@ func main() {
 
 	// go run . --stdout --sample-level=4 009C.txt
 
-	sampleLevel := flag.Int("sample-level", 1, "verbosity of the sample (1 to 4)")
+	sampleLevel := flag.Int("sample-level", 4, "verbosity of the sample (1 to 4)")
 	displayOnStdout := flag.Bool("stdout", false, "display output on stdout")
 
 	flag.Parse()
