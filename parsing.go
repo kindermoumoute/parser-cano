@@ -161,9 +161,6 @@ func parseDescription(descriptionLines []string, timer time.Duration) Descriptio
 				desc.Event = content
 			}
 		case PeopleReg.MatchString(tmp[0]):
-			if content != "" {
-				desc.Content = append(desc.Content, line)
-			}
 		default:
 			line = sanitizeLine(line)
 			if line != "" {
