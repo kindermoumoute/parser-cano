@@ -39,13 +39,13 @@ func (t *CanoTrack) ToSRT(sampleLevel int) *SRT {
 		case desc.IsSequence && sampleLevel >= 3:
 			content = desc.Content
 		case desc.IsSequence && sampleLevel == 2:
-			if len(desc.Content) > 1 {
+			if len(desc.Content) >= 1 {
 				content = desc.Content[:1]
 			}
 		case !desc.IsSequence && sampleLevel == 4:
 			content = desc.Content
 		case !desc.IsSequence && sampleLevel == 3:
-			if len(desc.Content) > 1 {
+			if len(desc.Content) >= 1 {
 				content = desc.Content[:1]
 			}
 		}
