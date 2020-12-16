@@ -1,4 +1,4 @@
-package main
+package parser_cano
 
 import (
 	"fmt"
@@ -21,7 +21,7 @@ var (
 	timerRegexp = regexp.MustCompile(`.*([0-9]{2}:[0-9]{2}).*`)
 )
 
-func parseCanoTrack(rawInput []byte) *CanoTrack {
+func ParseCanoTrack(rawInput []byte) *CanoTrack {
 	inputString := sanitize(string(rawInput))
 
 	track := &CanoTrack{}
@@ -71,9 +71,13 @@ func extractTimersFromLines(rawInput string) ([]time.Duration, []int, []string) 
 		// Convert timer to time.Duration.
 		timerParts := strings.Split(lineMatch[1], ":")
 		minutes, err := strconv.Atoi(timerParts[0])
-		assertNoError(err)
+		if err != nil {
+			panic(err)
+		}
 		seconds, err := strconv.Atoi(timerParts[1])
-		assertNoError(err)
+		if err != nil {
+			panic(err)
+		}
 		timers = append(timers, time.Duration(minutes)*time.Minute+time.Duration(seconds)*time.Second)
 
 		timerIndices = append(timerIndices, lineIndex)

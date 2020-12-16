@@ -5,12 +5,8 @@ import (
 	"fmt"
 	"io/ioutil"
 	"os"
-	"runtime"
-	"time"
-)
 
-const (
-	defaultCaptionDuration = 10 * time.Second
+	parser_cano "github.com/kindermoumoute/parser-cano"
 )
 
 func main() {
@@ -19,13 +15,9 @@ func main() {
 	// go run . --stdout --sample-level=4 009C.txt
 
 	sampleLevel := flag.Int("sample-level", 1, "verbosity of the sample (1 to 4)")
-	forceWindows := flag.Bool("force-windows", false, "force srt generation for windows")
 	displayOnStdout := flag.Bool("stdout", false, "display output on stdout")
 
 	flag.Parse()
-	if runtime.GOOS == "windows" || *forceWindows {
-		eol = "\r\n"
-	}
 
 	for _, file := range flag.Args() {
 		rawInput, err := ioutil.ReadFile(file)
@@ -35,7 +27,7 @@ func main() {
 			fmt.Println("parsing file", file)
 		}
 
-		track := parseCanoTrack(rawInput)
+		track := parser_cano.ParseCanoTrack(rawInput)
 		srtContent := track.ToSRT(*sampleLevel).ToSRT()
 		if *displayOnStdout {
 			fmt.Println(srtContent)

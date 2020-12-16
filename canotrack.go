@@ -1,9 +1,13 @@
-package main
+package parser_cano
 
 import (
 	"fmt"
 	"sort"
 	"time"
+)
+
+const (
+	defaultCaptionDuration = 10 * time.Second
 )
 
 type CanoTrack struct {

@@ -1,4 +1,4 @@
-package main
+package parser_cano
 
 import (
 	"fmt"
